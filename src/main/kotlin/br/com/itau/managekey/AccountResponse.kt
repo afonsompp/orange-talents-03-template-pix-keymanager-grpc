@@ -9,12 +9,20 @@ data class AccountResponse(
 	val numero: String,
 	val titular: OwnerResponse
 ) {
+	fun toAccount(): Account = Account(
+		AccountType.valueOf(tipo),
+		agencia,
+		numero,
+		titular.toOwner(),
+		instituicao.toInstitution()
+	)
 }
 
 data class InstitutionResponse(
 	val nome: String,
 	val ispb: String
 ) {
+	fun toInstitution(): Institution = Institution(nome, ispb)
 }
 
 data class OwnerResponse(
@@ -22,4 +30,5 @@ data class OwnerResponse(
 	val nome: String,
 	val cpf: String
 ) {
+	fun toOwner(): Owner = Owner(id, nome, cpf)
 }

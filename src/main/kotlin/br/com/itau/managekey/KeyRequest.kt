@@ -14,4 +14,10 @@ class KeyRequest(
         @field:NotBlank val customerId: String,
         @field:NotNull val keyType: KeyType?,
         @field:NotNull val accountType: AccountType?,
-) 
+) {
+    fun toKey(account: AccountResponse): Key =
+            Key(
+                    if (keyType == KeyType.RANDOM) UUID.randomUUID().toString() else key,
+                    keyType!!,
+                    account.toAccount())
+}
