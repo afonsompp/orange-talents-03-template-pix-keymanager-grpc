@@ -1,6 +1,7 @@
 package br.com.itau.managekey
 
 import br.com.itau.shered.extension.toModel
+import br.com.itau.shered.handler.ExceptionInterceptor
 import br.com.zup.manage.pix.ManagePixServiceGrpc
 import br.com.zup.manage.pix.RegisterKeyRequest
 import br.com.zup.manage.pix.RegisterKeyResponse
@@ -13,6 +14,7 @@ open class PixManagerEndpoint(
 	@Inject val service: RegisterKeyService
 ) : ManagePixServiceGrpc.ManagePixServiceImplBase() {
 
+	@ExceptionInterceptor
 	override fun registerKey(
 		request: RegisterKeyRequest,
 		responseObserver: StreamObserver<RegisterKeyResponse>
