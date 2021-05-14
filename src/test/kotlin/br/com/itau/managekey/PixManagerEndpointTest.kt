@@ -1,9 +1,6 @@
 package br.com.itau.managekey
 
-import br.com.zup.manage.pix.AccountType
-import br.com.zup.manage.pix.KeyType
-import br.com.zup.manage.pix.ManagePixServiceGrpc
-import br.com.zup.manage.pix.RegisterKeyRequest
+import br.com.zup.manage.pix.*
 import io.grpc.ManagedChannel
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
@@ -29,7 +26,7 @@ import java.util.stream.Stream
 import javax.inject.Inject
 import org.mockito.Mockito.`when` as inCase
 
-@MicronautTest
+@MicronautTest(transactional = false)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class PixManagerEndpointTest {
 	@Inject
@@ -95,6 +92,23 @@ internal class PixManagerEndpointTest {
 
 		assertEquals(status.code, error.status.code)
 		assertEquals(message, error.status.description)
+	}
+
+	@Test
+	fun `Should delete key if client have this key`() {
+		val institution = InstitutionResponse("a", "a")
+		val owner = OwnerResponse(UUID.randomUUID().toString(), "a", "a")
+		val account = AccountResponse("CONTA_CORRENTE", institution, "1", "1", owner)
+
+		val key = Key("abc@def.com", KeyType.EMAIL, account.toAccount())
+		repository.save(key)
+
+		val requestRemove = RemoveKeyRequest.newBuilder()
+			.setKeyId(key.id!!)
+			.setCustomerId(owner.id)
+			.build()
+		val response = grpc.removeKey(requestRemove)
+		assertEquals("Success", response.message)
 	}
 
 	fun provideValues(): Stream<Arguments> {
