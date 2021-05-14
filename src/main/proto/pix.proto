@@ -9,6 +9,7 @@ package br.com.zup.manage.pix;
 
 service ManagePixService {
   rpc registerKey(RegisterKeyRequest) returns (RegisterKeyResponse){}
+  rpc removeKey(RemoveKeyRequest) returns (RemoveKeyResponse){}
 }
 
 enum KeyType {
@@ -34,4 +35,13 @@ message RegisterKeyRequest {
 message RegisterKeyResponse {
   int64 keyId = 1;
   string key = 2;
+}
+
+message RemoveKeyRequest{
+  string customerId = 1;
+  int64 keyId = 2;
+}
+
+message RemoveKeyResponse{
+  string message = 1;
 }

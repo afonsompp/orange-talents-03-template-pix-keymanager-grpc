@@ -2,9 +2,7 @@ package br.com.itau.managekey
 
 import br.com.itau.shered.extension.toModel
 import br.com.itau.shered.handler.ExceptionInterceptor
-import br.com.zup.manage.pix.ManagePixServiceGrpc
-import br.com.zup.manage.pix.RegisterKeyRequest
-import br.com.zup.manage.pix.RegisterKeyResponse
+import br.com.zup.manage.pix.*
 import io.grpc.stub.StreamObserver
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -27,6 +25,17 @@ open class PixManagerEndpoint(
 				.setKey(key.key)
 				.build()
 		)
+		responseObserver.onCompleted()
+	}
+
+	@ExceptionInterceptor
+	override fun removeKey(
+		request: RemoveKeyRequest,
+		responseObserver: StreamObserver<RemoveKeyResponse>
+	) {
+		service.deleteKey(request.keyId, request.customerId)
+
+		responseObserver.onNext(RemoveKeyResponse.newBuilder().setMessage("Success").build())
 		responseObserver.onCompleted()
 	}
 }
