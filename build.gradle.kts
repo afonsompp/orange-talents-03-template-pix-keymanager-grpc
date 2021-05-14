@@ -56,6 +56,7 @@ dependencies {
 	testImplementation("io.micronaut.test:micronaut-test-junit5:2.3.2")
 	testImplementation("org.junit.jupiter:junit-jupiter-api")
 	testImplementation("org.junit.jupiter:junit-jupiter-engine:5.2.3.2")
+	testCompile("org.junit.jupiter:junit-jupiter-params:5.2.3")
 	testImplementation("org.mockito:mockito-core:3.8.0")
 	testRuntimeOnly("com.h2database:h2")
 }
