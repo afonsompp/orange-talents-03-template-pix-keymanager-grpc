@@ -1,20 +1,37 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "br.com.itau";
+option java_package = "br.com.zup.manage.pix";
 option java_outer_classname = "Pix";
 option objc_class_prefix = "HLW";
 
-package br.com.itau;
+package br.com.zup.manage.pix;
 
-service PixService {
-  rpc send (PixRequest) returns (PixReply) {}
+service ManagePixService {
+  rpc registerKey(RegisterKeyRequest) returns (RegisterKeyResponse){}
 }
 
-message PixRequest {
-  string name = 1;
+enum KeyType {
+  UNKNOWN_TYPE = 0;
+  CPF = 1;
+  EMAIL = 2;
+  PHONE = 3;
+  RANDOM = 4;
 }
 
-message PixReply {
-  string message = 1;
+enum AccountType {
+  UNKNOWN_ACCOUNT = 0;
+  CONTA_CORRENTE = 1;
+  CONTA_POUPANCA = 2;
+}
+
+message RegisterKeyRequest {
+  string customerId = 1;
+  KeyType type = 2;
+  string  value = 3;
+  AccountType accountType = 4;
+}
+message RegisterKeyResponse {
+  int64 keyId = 1;
+  string key = 2;
 }
