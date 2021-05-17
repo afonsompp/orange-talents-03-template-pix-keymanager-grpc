@@ -1,6 +1,7 @@
 package br.com.itau.managekey
 
 import br.com.zup.manage.pix.KeyDetailsResponse
+import br.com.zup.manage.pix.KeyDetailsResponse.AccountDetailsResponse
 import br.com.zup.manage.pix.KeyType
 import com.google.protobuf.Timestamp
 import java.time.LocalDateTime
@@ -46,12 +47,15 @@ class Key(
 			.setKey(key)
 			.setCustomerId(account.owner.id)
 			.setKeyType(type)
-			.setCustomerName(account.owner.name)
-			.setCustomerCPF(account.owner.cpf)
-			.setInstitution(account.institution.name)
-			.setBranch(account.agency)
-			.setNumber(account.number)
-			.setAccountType(account.type)
+			.setAccount(
+				AccountDetailsResponse.newBuilder()
+					.setCustomerName(account.owner.name)
+					.setCustomerCPF(account.owner.cpf)
+					.setInstitution(account.institution.name)
+					.setBranch(account.agency)
+					.setNumber(account.number)
+					.setAccountType(account.type).build()
+			)
 			.setCreatedAt(
 				Timestamp.newBuilder()
 					.setNanos(createdAt.nano)

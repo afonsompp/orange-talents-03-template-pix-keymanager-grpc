@@ -1,6 +1,7 @@
 package br.com.itau.managekey
 
 import br.com.zup.manage.pix.KeyDetailsResponse
+import br.com.zup.manage.pix.KeyDetailsResponse.AccountDetailsResponse
 import br.com.zup.manage.pix.KeyType
 import com.google.protobuf.Timestamp
 import java.time.LocalDateTime
@@ -16,12 +17,16 @@ data class BcbCreatePixResponse(
 		return KeyDetailsResponse.newBuilder()
 			.setKey(key)
 			.setKeyType(KeyType.valueOf(keyType))
-			.setCustomerName(owner.name)
-			.setCustomerCPF(owner.taxIdNumber)
-			.setInstitution(Institution.getNameFromParticipant(bankAccount.participant))
-			.setBranch(bankAccount.branch)
-			.setNumber(bankAccount.accountNumber)
-			.setAccountType(BcbAccountType.valueOf(bankAccount.accountType).grpcAccountType)
+			.setAccount(
+				AccountDetailsResponse.newBuilder()
+					.setCustomerName(owner.name)
+					.setCustomerCPF(owner.taxIdNumber)
+					.setInstitution(Institution.getNameFromParticipant(bankAccount.participant))
+					.setBranch(bankAccount.branch)
+					.setNumber(bankAccount.accountNumber)
+					.setAccountType(BcbAccountType.valueOf(bankAccount.accountType).grpcAccountType)
+					.build()
+			)
 			.setCreatedAt(
 				Timestamp.newBuilder()
 					.setNanos(createdAt.nano)
