@@ -10,4 +10,6 @@ interface KeyRepository : JpaRepository<Key, Long> {
 
 	@Query("SELECT k FROM Key k WHERE k.id = :keyId AND k.account.owner.id = :customerId")
 	fun findByIdAndCustomerId(keyId: Long, customerId: String): Key?
+
+	fun findByKey(key: String): Key?
 }

@@ -38,4 +38,22 @@ open class PixManagerEndpoint(
 		responseObserver.onNext(RemoveKeyResponse.newBuilder().setMessage("Success").build())
 		responseObserver.onCompleted()
 	}
+
+	@ExceptionInterceptor
+	override fun findKey(
+		request: KeyDetailsRequest,
+		responseObserver: StreamObserver<KeyDetailsResponse>
+	) {
+
+		if (request.filterCase.number == 1) {
+			responseObserver.onNext(
+				service.findKeyByKeyIdAndCustomer(request.pixId.keyId, request.pixId.customerId)
+			)
+			responseObserver.onCompleted()
+			return
+		}
+
+		responseObserver.onNext(service.findKeyByKey(request.key))
+		responseObserver.onCompleted()
+	}
 }

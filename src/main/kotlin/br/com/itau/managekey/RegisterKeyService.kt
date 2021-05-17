@@ -4,6 +4,7 @@ import br.com.itau.shered.exception.CustomerNotFoundException
 import br.com.itau.shered.exception.KeyAlreadyExistsException
 import br.com.itau.shered.exception.KeyNotFoundException
 import br.com.itau.shered.validation.ValidUUID
+import br.com.zup.manage.pix.KeyDetailsResponse
 import io.micronaut.validation.Validated
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -11,6 +12,7 @@ import javax.validation.Valid
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotNull
 import javax.validation.constraints.Positive
+import javax.validation.constraints.Size
 
 @Singleton
 @Validated
@@ -45,5 +47,25 @@ class RegisterKeyService(
 			?: throw KeyNotFoundException("Key not found")
 		bcbClient.deleteKey(key.key, BcbDeleteKeyRequest(key.key))
 		repository.delete(key)
+	}
+
+	fun findKeyByKeyIdAndCustomer(
+		@NotNull @Positive keyId: Long,
+		@NotBlank @ValidUUID customerId: String,
+	): KeyDetailsResponse {
+		return repository.findByIdAndCustomerId(keyId, customerId)?.toKeyDetailsResponse()
+			?: throw KeyNotFoundException("Key not found")
+	}
+
+	fun findKeyByKey(@NotBlank @Size(max = 77) value: String): KeyDetailsResponse {
+		return repository.findByKey(value)?.toKeyDetailsResponse()
+			?: run {
+				val bcbKey = bcbClient.findKey(value)
+				if (bcbKey.status.code == 200) {
+					return bcbKey.body()!!.toKeyDetailsResponse()
+				}
+				throw KeyNotFoundException("Key not found")
+
+			}
 	}
 }

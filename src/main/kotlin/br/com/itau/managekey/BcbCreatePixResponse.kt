@@ -1,5 +1,8 @@
 package br.com.itau.managekey
 
+import br.com.zup.manage.pix.KeyDetailsResponse
+import br.com.zup.manage.pix.KeyType
+import com.google.protobuf.Timestamp
 import java.time.LocalDateTime
 
 data class BcbCreatePixResponse(
@@ -8,7 +11,25 @@ data class BcbCreatePixResponse(
 	val bankAccount: BcbBankAccountResponse,
 	val owner: BcbOwnerResponse,
 	val createdAt: LocalDateTime
-)
+) {
+	fun toKeyDetailsResponse(): KeyDetailsResponse {
+		return KeyDetailsResponse.newBuilder()
+			.setKey(key)
+			.setKeyType(KeyType.valueOf(keyType))
+			.setCustomerName(owner.name)
+			.setCustomerCPF(owner.taxIdNumber)
+			.setInstitution(Institution.getNameFromParticipant(bankAccount.participant))
+			.setBranch(bankAccount.branch)
+			.setNumber(bankAccount.accountNumber)
+			.setAccountType(BcbAccountType.valueOf(bankAccount.accountType).grpcAccountType)
+			.setCreatedAt(
+				Timestamp.newBuilder()
+					.setNanos(createdAt.nano)
+					.setSeconds(createdAt.second.toLong())
+					.build()
+			).build()
+	}
+}
 
 data class BcbBankAccountResponse(
 	val participant: String,
