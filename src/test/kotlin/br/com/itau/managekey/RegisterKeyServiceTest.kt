@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito.anyString
 import org.mockito.Mockito.mock
+import java.time.LocalDateTime
 import java.util.*
 import javax.inject.Inject
 import org.mockito.Mockito.`when` as inCase
@@ -29,7 +30,10 @@ internal class RegisterKeyServiceTest {
 	lateinit var service: RegisterKeyService
 
 	@Inject
-	lateinit var client: SystemErpHttpClient
+	lateinit var erp: SystemErpHttpClient
+
+	@Inject
+	lateinit var bcb: BcbHttpClient
 
 	@AfterEach
 	fun after() = repository.deleteAll()
@@ -42,7 +46,25 @@ internal class RegisterKeyServiceTest {
 		val account = AccountResponse("CONTA_CORRENTE", institution, "1", "1", owner)
 		val request = KeyRequest("abc@def.com", uuid, EMAIL, CONTA_CORRENTE)
 
-		inCase(client.getAccount(anyString(), anyString())).thenReturn(HttpResponse.ok(account))
+		val bcbOwner = BcbOwnerResponse("NATURAL_PERSON", "Afonso", "123")
+		val bcbBankAcc = BcbBankAccountResponse("1", "1", "1", "1")
+		val keyHttpResponse = HttpResponse.ok(
+			BcbCreatePixResponse(
+				"EMAIL", "abc@def.com", bcbBankAcc, bcbOwner, LocalDateTime.now()
+			)
+		)
+		inCase(erp.getAccount(anyString(), anyString())).thenReturn(HttpResponse.ok(account))
+		inCase(
+			bcb.registerKey(
+				BcbCreatePixRequest.of(
+					Key(
+						"abc@def.com",
+						EMAIL,
+						account.toAccount()
+					)
+				)
+			)
+		).thenReturn(keyHttpResponse)
 
 		val key = service.saveKey(request)
 
@@ -64,7 +86,7 @@ internal class RegisterKeyServiceTest {
 	fun `Should throw CustomerNotFoundException when erp return request body null`() {
 		val request = KeyRequest("abc@def.com", UUID.randomUUID().toString(), EMAIL, CONTA_CORRENTE)
 
-		inCase(client.getAccount(anyString(), anyString())).thenReturn(HttpResponse.ok(null))
+		inCase(erp.getAccount(anyString(), anyString())).thenReturn(HttpResponse.ok(null))
 
 		val error = assertThrows<CustomerNotFoundException> { service.saveKey(request) }
 		assertEquals("Client not found", error.message)
@@ -78,7 +100,7 @@ internal class RegisterKeyServiceTest {
 		val request = KeyRequest("abc@def.com", UUID.randomUUID().toString(), EMAIL, CONTA_CORRENTE)
 		val key = Key("abc@def.com", EMAIL, account.toAccount())
 
-		inCase(client.getAccount(anyString(), anyString())).thenReturn(HttpResponse.ok(account))
+		inCase(erp.getAccount(anyString(), anyString())).thenReturn(HttpResponse.ok(account))
 		repository.save(key)
 
 		val error = assertThrows<KeyAlreadyExistsException> { service.saveKey(request) }
@@ -119,7 +141,12 @@ internal class RegisterKeyServiceTest {
 	}
 
 	@MockBean(SystemErpHttpClient::class)
-	fun mockClient(): SystemErpHttpClient {
+	fun mockClientErp(): SystemErpHttpClient {
 		return mock(SystemErpHttpClient::class.java)
+	}
+
+	@MockBean(BcbHttpClient::class)
+	fun mockClientBcb(): BcbHttpClient {
+		return mock(BcbHttpClient::class.java)
 	}
 }

@@ -21,6 +21,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.Mockito.anyString
 import org.mockito.Mockito.mock
+import java.time.LocalDateTime
 import java.util.*
 import java.util.stream.Stream
 import javax.inject.Inject
@@ -31,6 +32,9 @@ import org.mockito.Mockito.`when` as inCase
 internal class PixManagerEndpointTest {
 	@Inject
 	lateinit var client: SystemErpHttpClient
+
+	@Inject
+	lateinit var bcb: BcbHttpClient
 
 	@Inject
 	lateinit var repository: KeyRepository
@@ -57,8 +61,26 @@ internal class PixManagerEndpointTest {
 
 	@Test
 	fun `Should save key in database and return a valid response`() {
-		inCase(client.getAccount(anyString(), anyString()))
-			.thenReturn(HttpResponse.ok(account))
+		val bcbOwner = BcbOwnerResponse("NATURAL_PERSON", "Afonso", "123")
+		val bcbBankAcc = BcbBankAccountResponse("1", "1", "1", "1")
+		val keyHttpResponse = HttpResponse.ok(
+			BcbCreatePixResponse(
+				"EMAIL", "abc@def.com", bcbBankAcc, bcbOwner, LocalDateTime.now()
+			)
+		)
+
+		inCase(client.getAccount(anyString(), anyString())).thenReturn(HttpResponse.ok(account))
+		inCase(
+			bcb.registerKey(
+				BcbCreatePixRequest.of(
+					Key(
+						"02654220273",
+						KeyType.CPF,
+						account.toAccount()
+					)
+				)
+			)
+		).thenReturn(keyHttpResponse)
 
 		grpc.registerKey(request.build())
 
@@ -70,8 +92,26 @@ internal class PixManagerEndpointTest {
 
 	@Test
 	fun `Should throw error when key already exists in database`() {
+		val bcbOwner = BcbOwnerResponse("NATURAL_PERSON", "Afonso", "123")
+		val bcbBankAcc = BcbBankAccountResponse("1", "1", "1", "1")
+		val keyHttpResponse = HttpResponse.ok(
+			BcbCreatePixResponse(
+				"EMAIL", "abc@def.com", bcbBankAcc, bcbOwner, LocalDateTime.now()
+			)
+		)
 		inCase(client.getAccount(anyString(), anyString()))
 			.thenReturn(HttpResponse.ok(account))
+		inCase(
+			bcb.registerKey(
+				BcbCreatePixRequest.of(
+					Key(
+						"02654220273",
+						KeyType.CPF,
+						account.toAccount()
+					)
+				)
+			)
+		).thenReturn(keyHttpResponse)
 
 		val response = grpc.registerKey(request.build())
 
@@ -175,8 +215,13 @@ internal class PixManagerEndpointTest {
 	}
 
 	@MockBean(SystemErpHttpClient::class)
-	fun mockClient(): SystemErpHttpClient {
+	fun mockClientErp(): SystemErpHttpClient {
 		return mock(SystemErpHttpClient::class.java)
+	}
+
+	@MockBean(BcbHttpClient::class)
+	fun mockClientBcb(): BcbHttpClient {
+		return mock(BcbHttpClient::class.java)
 	}
 }
 
