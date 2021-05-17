@@ -39,7 +39,7 @@ class RegisterKeyService(
 	) {
 		val key = repository.findByIdAndCustomerId(keyId, customerId)
 			?: throw KeyNotFoundException("Key not found")
-
+		bcbClient.deleteKey(key.key, BcbDeleteKeyRequest(key.key))
 		repository.delete(key)
 	}
 }
