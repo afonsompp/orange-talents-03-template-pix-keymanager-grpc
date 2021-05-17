@@ -16,7 +16,8 @@ import javax.validation.constraints.Positive
 @Validated
 class RegisterKeyService(
 	@Inject val repository: KeyRepository,
-	@Inject val erpClient: SystemErpHttpClient
+	@Inject val erpClient: SystemErpHttpClient,
+	@Inject val bcbClient: BcbHttpClient
 ) {
 
 	fun saveKey(@Valid request: KeyRequest): Key {
@@ -29,6 +30,9 @@ class RegisterKeyService(
 		val account = response.body() ?: throw CustomerNotFoundException("Client not found")
 
 		val key = request.toKey(account)
+		val bcbResponse = bcbClient.registerKey(BcbCreatePixRequest.of(key))
+
+		key.updateKey(bcbResponse.body()!!.key)
 
 		return repository.save(key)
 	}
