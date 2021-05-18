@@ -16,8 +16,6 @@ internal class KeyTest {
 		val account = Account(AccountType.CONTA_CORRENTE, "", "", owner, institution)
 		val key = Key("key", keyType, account)
 
-
-
 		assertEquals(result, key.updateKey(value))
 		if (result) {
 			assertEquals(value, key.key)

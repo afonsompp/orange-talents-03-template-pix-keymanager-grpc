@@ -19,6 +19,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.anyString
 import org.mockito.Mockito.mock
 import java.time.LocalDateTime
@@ -53,7 +54,7 @@ internal class PixManagerEndpointTest {
 		InstitutionResponse("a", "a"),
 		"1",
 		"1",
-		OwnerResponse("a", "a", "a")
+		OwnerResponse(UUID.randomUUID().toString(), "a", "a")
 	)
 
 	@AfterEach
@@ -61,11 +62,13 @@ internal class PixManagerEndpointTest {
 
 	@Test
 	fun `Should save key in database and return a valid response`() {
-		val bcbOwner = BcbOwnerResponse("NATURAL_PERSON", "Afonso", "123")
-		val bcbBankAcc = BcbBankAccountResponse("1", "1", "1", "1")
 		val keyHttpResponse = HttpResponse.ok(
-			BcbCreatePixResponse(
-				"EMAIL", "abc@def.com", bcbBankAcc, bcbOwner, LocalDateTime.now()
+			BcbPixResponse(
+				"EMAIL",
+				"abc@def.com",
+				BcbBankAccountResponse("1", "1", "1", "1"),
+				BcbOwnerResponse("NATURAL_PERSON", "Afonso", "123"),
+				LocalDateTime.now()
 			)
 		)
 
@@ -92,11 +95,13 @@ internal class PixManagerEndpointTest {
 
 	@Test
 	fun `Should throw error when key already exists in database`() {
-		val bcbOwner = BcbOwnerResponse("NATURAL_PERSON", "Afonso", "123")
-		val bcbBankAcc = BcbBankAccountResponse("1", "1", "1", "1")
 		val keyHttpResponse = HttpResponse.ok(
-			BcbCreatePixResponse(
-				"EMAIL", "abc@def.com", bcbBankAcc, bcbOwner, LocalDateTime.now()
+			BcbPixResponse(
+				"EMAIL",
+				"abc@def.com",
+				BcbBankAccountResponse("1", "1", "1", "1"),
+				BcbOwnerResponse("NATURAL_PERSON", "Afonso", "123"),
+				LocalDateTime.now()
 			)
 		)
 		inCase(client.getAccount(anyString(), anyString()))
@@ -136,19 +141,145 @@ internal class PixManagerEndpointTest {
 
 	@Test
 	fun `Should delete key if client have this key`() {
-		val institution = InstitutionResponse("a", "a")
-		val owner = OwnerResponse(UUID.randomUUID().toString(), "a", "a")
-		val account = AccountResponse("CONTA_CORRENTE", institution, "1", "1", owner)
-
-		val key = Key("abc@def.com", KeyType.EMAIL, account.toAccount())
-		repository.save(key)
+		val key = repository.save(Key("abc@def.com", KeyType.EMAIL, account.toAccount()))
 
 		val requestRemove = RemoveKeyRequest.newBuilder()
 			.setKeyId(key.id!!)
-			.setCustomerId(owner.id)
+			.setCustomerId(key.account.owner.id)
 			.build()
 		val response = grpc.removeKey(requestRemove)
 		assertEquals("Success", response.message)
+	}
+
+	@Test
+	fun `Should return key if client have this key`() {
+		val key = repository.save(Key("abc@def.com", KeyType.EMAIL, account.toAccount()))
+
+		val request = KeyDetailsRequest.newBuilder()
+			.setPixId(
+				KeyDetailsRequest.PixKey.newBuilder()
+					.setKeyId(key.id!!)
+					.setCustomerId(key.account.owner.id)
+			)
+			.build()
+		val response = grpc.findKey(request)
+
+		assertEquals(key.id!!, response.keyId)
+		assertEquals(key.account.owner.id, response.customerId)
+	}
+
+	@Test
+	fun `Should throw KeyNotFoundException when find by PixId if key don't exists in database`() {
+
+		val request = KeyDetailsRequest.newBuilder()
+			.setPixId(
+				KeyDetailsRequest.PixKey.newBuilder()
+					.setKeyId(1L)
+					.setCustomerId(UUID.randomUUID().toString())
+			)
+			.build()
+		val error = assertThrows<StatusRuntimeException> { grpc.findKey(request) }
+
+
+		assertEquals(Status.NOT_FOUND.code, error.status.code)
+		assertEquals("Key not found", error.status.description)
+	}
+
+	@Test
+	fun `Should throw KeyNotFoundException if key don't exists in database and bcb`() {
+		inCase(bcb.findKey(anyString())).thenReturn(HttpResponse.notFound())
+		val request = KeyDetailsRequest.newBuilder().setKey("124").build()
+		val error = assertThrows<StatusRuntimeException> { grpc.findKey(request) }
+
+		assertEquals(Status.NOT_FOUND.code, error.status.code)
+		assertEquals("Key not found", error.status.description)
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = ["key", "123"])
+	fun `Should return key if exists in system or bcb database when find by key`(key: String) {
+		val acc = Account(
+			AccountType.CONTA_CORRENTE,
+			"",
+			"",
+			Owner("123", "a", "a"),
+			Institution("a", "60701190")
+		)
+		repository.save(Key("key", KeyType.EMAIL, acc))
+
+		val keyHttpResponse = HttpResponse.ok(
+			BcbPixResponse(
+				"CPF",
+				"123",
+				BcbBankAccountResponse("60701190", "1", "1", "CACC"),
+				BcbOwnerResponse("NATURAL_PERSON", "Afonso", "123"),
+				LocalDateTime.now()
+			)
+		)
+		inCase(bcb.findKey(anyString())).thenReturn(keyHttpResponse)
+		val request = KeyDetailsRequest.newBuilder().setKey(key).build()
+		val result = grpc.findKey(request)
+
+		assertEquals(key, result.key)
+	}
+
+	@Test
+	fun `Should return key if exists in database when find by key and customer id`() {
+		val acc = Account(
+			AccountType.CONTA_CORRENTE,
+			"",
+			"",
+			Owner(UUID.randomUUID().toString(), "a", "a"),
+			Institution("a", "60701190")
+		)
+		val key = repository.save(Key("key", KeyType.EMAIL, acc))
+
+		val request =
+			KeyDetailsRequest.newBuilder()
+				.setPixId(
+					KeyDetailsRequest.PixKey.newBuilder()
+						.setKeyId(key.id!!)
+						.setCustomerId(key.account.owner.id)
+				).build()
+		val result = grpc.findKey(request)
+
+		assertEquals(key.key, result.key)
+	}
+
+	@Test
+	fun `Should throws CustomerNotFoundException if customer don't exists in database`() {
+		val error = assertThrows<StatusRuntimeException> {
+			grpc.listKeysOfCustomer(
+				ListOfKeysRequest.newBuilder()
+					.setCustomerId(UUID.randomUUID().toString())
+					.build()
+			)
+		}
+		assertEquals(Status.NOT_FOUND.code, error.status.code)
+		assertEquals("Customer not found", error.status.description)
+	}
+
+	@Test
+	fun `Should return key list of a customer`() {
+		val uuid = UUID.randomUUID().toString()
+		val institution = Institution("a", "a")
+		val owner1 = Owner(uuid, "a", "a")
+		val owner2 = Owner("321", "a", "a")
+		val account1 = Account(AccountType.CONTA_CORRENTE, "", "", owner1, institution)
+		val account2 = Account(AccountType.CONTA_CORRENTE, "", "", owner2, institution)
+		val list = repository.saveAll(
+			listOf(
+				Key("key", KeyType.EMAIL, account1),
+				Key("key2", KeyType.EMAIL, account1),
+				Key("key3", KeyType.EMAIL, account2)
+			)
+		)
+		val response =
+			grpc.listKeysOfCustomer(ListOfKeysRequest.newBuilder().setCustomerId(uuid).build())
+
+		assertEquals(2, response.keyCount)
+		assertEquals(list[0].key, response.keyList[0].key)
+		assertEquals(list[1].key, response.keyList[1].key)
 	}
 
 	fun provideValues(): Stream<Arguments> {
@@ -203,7 +334,7 @@ internal class PixManagerEndpointTest {
 				Status.INVALID_ARGUMENT,
 				"Value to random key must be null or blank"
 			),
-			//
+			// Invalid UUID case
 			Arguments.of(
 				request.clone().setCustomerId(UUID.randomUUID().toString() + "1").build(),
 				account,
