@@ -9,7 +9,7 @@ import javax.inject.Singleton
 
 @Singleton
 open class PixManagerEndpoint(
-	@Inject val service: RegisterKeyService
+	@Inject val service: ManageKeyService
 ) : ManagePixServiceGrpc.ManagePixServiceImplBase() {
 
 	@ExceptionInterceptor
@@ -54,6 +54,18 @@ open class PixManagerEndpoint(
 		}
 
 		responseObserver.onNext(service.findKeyByKey(request.key))
+		responseObserver.onCompleted()
+	}
+
+	@ExceptionInterceptor
+	override fun listKeysOfCustomer(
+		request: ListOfKeysRequest,
+		responseObserver: StreamObserver<ListOfKeysResponse>
+	) {
+		val response = ListOfKeysResponse
+			.newBuilder().addAllKey(service.findKeyByCustomer(request.customerId)).build()
+
+		responseObserver.onNext(response)
 		responseObserver.onCompleted()
 	}
 }

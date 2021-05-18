@@ -16,7 +16,7 @@ import javax.validation.constraints.Size
 
 @Singleton
 @Validated
-class RegisterKeyService(
+class ManageKeyService(
 	@Inject val repository: KeyRepository,
 	@Inject val erpClient: SystemErpHttpClient,
 	@Inject val bcbClient: BcbHttpClient
@@ -65,7 +65,14 @@ class RegisterKeyService(
 					return bcbKey.body()!!.toKeyDetailsResponse()
 				}
 				throw KeyNotFoundException("Key not found")
-
 			}
+	}
+
+	fun findKeyByCustomer(
+		@NotBlank @ValidUUID customerId: String,
+	): List<KeyDetailsResponse> {
+		val keys = repository.findByCustomerId(customerId).map { it.toKeyDetailsResponse() }
+		if (keys.isEmpty()) throw CustomerNotFoundException("Customer not found")
+		return keys
 	}
 }
