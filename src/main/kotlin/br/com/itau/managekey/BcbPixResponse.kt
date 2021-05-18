@@ -6,7 +6,7 @@ import br.com.zup.manage.pix.KeyType
 import com.google.protobuf.Timestamp
 import java.time.LocalDateTime
 
-data class BcbCreatePixResponse(
+data class BcbPixResponse(
 	val keyType: String,
 	val key: String,
 	val bankAccount: BcbBankAccountResponse,

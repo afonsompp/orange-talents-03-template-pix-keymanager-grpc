@@ -9,12 +9,12 @@ import io.micronaut.http.client.annotation.Client
 interface BcbHttpClient {
 
 	@Post(value = "/pix/keys", produces = [APPLICATION_XML], consumes = [APPLICATION_XML])
-	fun registerKey(@Body request: BcbCreatePixRequest): HttpResponse<BcbCreatePixResponse>
+	fun registerKey(@Body request: BcbCreatePixRequest): HttpResponse<BcbPixResponse>
 
 	@Delete(value = "/pix/keys/{key}", produces = [APPLICATION_XML], consumes = [APPLICATION_XML])
 	fun deleteKey(@PathVariable key: String, @Body request: BcbDeleteKeyRequest):
 			HttpResponse<BcbDeleteKeyResponse>
 
 	@Get(value = "/pix/keys/{key}", produces = [APPLICATION_XML], consumes = [APPLICATION_XML])
-	fun findKey(@PathVariable key: String): HttpResponse<BcbCreatePixResponse>
+	fun findKey(@PathVariable key: String): HttpResponse<BcbPixResponse>
 }
