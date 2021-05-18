@@ -58,8 +58,8 @@ class Key(
 			)
 			.setCreatedAt(
 				Timestamp.newBuilder()
-					.setNanos(createdAt.nano)
-					.setSeconds(createdAt.second.toLong())
+					.setNanos(createdAt.toInstant().nano)
+					.setSeconds(createdAt.toInstant().epochSecond)
 					.build()
 			).build()
 	}

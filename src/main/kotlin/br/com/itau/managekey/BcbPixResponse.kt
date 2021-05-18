@@ -5,6 +5,7 @@ import br.com.zup.manage.pix.KeyDetailsResponse.AccountDetailsResponse
 import br.com.zup.manage.pix.KeyType
 import com.google.protobuf.Timestamp
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 data class BcbPixResponse(
 	val keyType: String,
@@ -29,8 +30,8 @@ data class BcbPixResponse(
 			)
 			.setCreatedAt(
 				Timestamp.newBuilder()
-					.setNanos(createdAt.nano)
-					.setSeconds(createdAt.second.toLong())
+					.setNanos(createdAt.atOffset(ZoneOffset.UTC).toInstant().nano)
+					.setSeconds(createdAt.atOffset(ZoneOffset.UTC).toInstant().epochSecond)
 					.build()
 			).build()
 	}
