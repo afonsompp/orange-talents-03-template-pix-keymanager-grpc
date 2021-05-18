@@ -3,9 +3,16 @@ micronaut:
     name: pix
 datasources:
   default:
-    url: jdbc:mysql://localhost:3306/pix?createDatabaseIfNotExist=true&useTimezone=true&serverTimezone=UTC
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/pix?useTimezone=true&serverTimezone=UTC
     driverClassName: com.mysql.cj.jdbc.Driver
-    username: root
-    password: root
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
     dialect: MYSQL
 jpa.default.properties.hibernate.hbm2ddl.auto: update
+
+erp:
+  host: ${ERP_HOST:localhost}
+  port: ${ERP_PORT:9091}
+bcb:
+  host: ${BCB_HOST:localhost}
+  port: ${BCB_PORT:8082}

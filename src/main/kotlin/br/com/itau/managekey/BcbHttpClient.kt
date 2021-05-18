@@ -5,7 +5,7 @@ import io.micronaut.http.MediaType.APPLICATION_XML
 import io.micronaut.http.annotation.*
 import io.micronaut.http.client.annotation.Client
 
-@Client("http://localhost:8082/api/v1")
+@Client("http://\${bcb.host}:\${bcb.port}/api/v1")
 interface BcbHttpClient {
 
 	@Post(value = "/pix/keys", produces = [APPLICATION_XML], consumes = [APPLICATION_XML])
