@@ -5,7 +5,6 @@ import br.com.itau.shered.exception.KeyAlreadyExistsException
 import br.com.itau.shered.exception.KeyNotFoundException
 import br.com.zup.manage.pix.AccountType
 import br.com.zup.manage.pix.AccountType.CONTA_CORRENTE
-import br.com.zup.manage.pix.KeyType
 import br.com.zup.manage.pix.KeyType.EMAIL
 import io.micronaut.http.HttpResponse
 import io.micronaut.test.annotation.MockBean
@@ -13,6 +12,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
@@ -46,7 +46,14 @@ internal class RegisterKeyServiceTest {
 		"1",
 		OwnerResponse(uuid, "a", "a")
 	)
-	val request = KeyRequest("abc@def.com", uuid, EMAIL, CONTA_CORRENTE)
+	private val request = KeyRequest("email@email.com", uuid, EMAIL, CONTA_CORRENTE)
+
+	private lateinit var savedKey: Key
+
+	@BeforeEach
+	internal fun setUp() {
+		savedKey = repository.save(Key("abc@def.com", EMAIL, account.toAccount()))
+	}
 
 	@AfterEach
 	fun after() = repository.deleteAll()
@@ -56,37 +63,31 @@ internal class RegisterKeyServiceTest {
 		val bcbOwner = BcbOwnerResponse("NATURAL_PERSON", "Afonso", "123")
 		val bcbBankAcc = BcbBankAccountResponse("1", "1", "1", "1")
 		val keyHttpResponse = HttpResponse.ok(
-			BcbPixResponse(
-				"EMAIL", "abc@def.com", bcbBankAcc, bcbOwner, LocalDateTime.now()
-			)
+			BcbPixResponse("EMAIL", "email@email.com", bcbBankAcc, bcbOwner, LocalDateTime.now())
 		)
 		inCase(erp.getAccount(anyString(), anyString())).thenReturn(HttpResponse.ok(account))
 		inCase(
-			bcb.registerKey(
-				BcbCreatePixRequest.of(
-					Key(
-						"abc@def.com",
-						EMAIL,
-						account.toAccount()
-					)
-				)
-			)
+			bcb.registerKey(BcbCreatePixRequest.of(Key("email@email.com", EMAIL, account.toAccount())))
 		).thenReturn(keyHttpResponse)
 
 		val key = service.saveKey(request)
 
-		assertEquals(key.key, "abc@def.com")
-		assertEquals(key.type, request.keyType)
-		assertEquals(key.account.type, request.accountType)
-		assertEquals(key.account.type, AccountType.valueOf(account.tipo))
-		assertEquals(key.account.agency, account.agencia)
-		assertEquals(key.account.number, account.numero)
-		assertEquals(key.account.institution.ispb, account.instituicao.ispb)
-		assertEquals(key.account.institution.name, account.instituicao.nome)
-		assertEquals(key.account.owner.id, request.customerId)
-		assertEquals(key.account.owner.id, account.titular.id)
-		assertEquals(key.account.owner.name, account.titular.nome)
-		assertEquals(key.account.owner.cpf, account.titular.cpf)
+		assertEquals(request.key, key.key)
+		assertEquals(request.keyType, key.type)
+		with(key.account) {
+			assertEquals(AccountType.valueOf(account.tipo), type)
+			assertEquals(request.accountType, type)
+			assertEquals(account.agencia, agency)
+			assertEquals(account.numero, number)
+			assertEquals(account.instituicao.ispb, institution.ispb)
+			assertEquals(account.instituicao.nome, institution.name)
+			assertEquals(request.customerId, owner.id)
+			with(account) {
+				assertEquals(titular.id, owner.id)
+				assertEquals(titular.nome, owner.name)
+				assertEquals(titular.cpf, owner.cpf)
+			}
+		}
 	}
 
 	@Test
@@ -99,11 +100,10 @@ internal class RegisterKeyServiceTest {
 
 	@Test
 	fun `Should throw a KeyAlreadyExistsException when key exist in database`() {
-
-		val key = Key("abc@def.com", EMAIL, account.toAccount())
+		val key = Key("email@email.com", EMAIL, account.toAccount())
+		repository.save(key)
 
 		inCase(erp.getAccount(anyString(), anyString())).thenReturn(HttpResponse.ok(account))
-		repository.save(key)
 
 		val error = assertThrows<KeyAlreadyExistsException> { service.saveKey(request) }
 		assertEquals("Pix key already exists", error.message)
@@ -111,7 +111,6 @@ internal class RegisterKeyServiceTest {
 
 	@Test
 	fun `Should delete key if key id and customer id exists`() {
-
 		val key = Key("abc@def.com", EMAIL, account.toAccount())
 		val savedKey = repository.save(key)
 
@@ -124,9 +123,6 @@ internal class RegisterKeyServiceTest {
 
 	@Test
 	fun `Should throws KeyNotFoundException if key don't exists in database`() {
-
-		val key = Key("abc@def.com", EMAIL, account.toAccount())
-		val savedKey = repository.save(key)
 
 		val error = assertThrows<KeyNotFoundException> {
 			service.deleteKey(savedKey.id!!, UUID.randomUUID().toString())
@@ -154,45 +150,34 @@ internal class RegisterKeyServiceTest {
 
 	@Test
 	fun `Should return key list of a customer`() {
-		val uuid = UUID.randomUUID().toString()
-		val institution = Institution("a", "a")
-		val owner1 = Owner(uuid, "a", "a")
-		val owner2 = Owner("321", "a", "a")
-		val account1 = Account(CONTA_CORRENTE, "", "", owner1, institution)
-		val account2 = Account(CONTA_CORRENTE, "", "", owner2, institution)
 		val list = repository.saveAll(
 			listOf(
-				Key("key", KeyType.EMAIL, account1),
-				Key("key2", KeyType.EMAIL, account1),
-				Key("key3", KeyType.EMAIL, account2)
+				Key("key", EMAIL, account.toAccount()),
+				Key("key2", EMAIL, account.toAccount()),
 			)
 		)
 		val response = service.findKeyByCustomer(uuid)
 
-		assertEquals(2, response.size)
-		assertEquals(list[0].key, response[0].key)
-		assertEquals(list[1].key, response[1].key)
+		assertEquals(3, response.size)
+		assertEquals(savedKey.key, response[0].key)
+		assertEquals(list[0].key, response[1].key)
+		assertEquals(list[1].key, response[2].key)
 	}
 
 	@Test
 	fun `Should return key if key id and customer id exists`() {
-		val key = repository.save(Key("abc@def.com", EMAIL, account.toAccount()))
+		val keyDetails = service.findKeyByKeyIdAndCustomer(savedKey.id!!, savedKey.account.owner.id)
 
-		val keyDetails = service.findKeyByKeyIdAndCustomer(key.id!!, key.account.owner.id)
-
-		assertEquals(key.id!!, keyDetails.keyId)
-		assertEquals(key.key, keyDetails.key)
-		assertEquals(key.account.owner.id, keyDetails.customerId)
+		with(keyDetails) {
+			assertEquals(savedKey.id!!, keyId)
+			assertEquals(savedKey.key, key)
+			assertEquals(savedKey.account.owner.id, customerId)
+		}
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = ["key", "123"])
+	@ValueSource(strings = ["abc@def.com", "123"])
 	fun `Should return key if exists in system or bcb database`(key: String) {
-		val institution = Institution("a", "60701190")
-		val owner = Owner("123", "a", "a")
-		val acc = Account(CONTA_CORRENTE, "", "", owner, institution)
-		repository.save(Key("key", KeyType.EMAIL, acc))
-
 		val keyHttpResponse = HttpResponse.ok(
 			BcbPixResponse(
 				"CPF",

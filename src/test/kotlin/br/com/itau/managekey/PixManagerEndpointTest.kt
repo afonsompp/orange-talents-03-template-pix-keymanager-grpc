@@ -1,8 +1,12 @@
 package br.com.itau.managekey
 
 import br.com.zup.manage.pix.*
+import br.com.zup.manage.pix.AccountType.CONTA_CORRENTE
+import br.com.zup.manage.pix.AccountType.UNKNOWN_ACCOUNT
+import br.com.zup.manage.pix.KeyType.*
 import io.grpc.ManagedChannel
 import io.grpc.Status
+import io.grpc.Status.*
 import io.grpc.StatusRuntimeException
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
@@ -46,8 +50,8 @@ internal class PixManagerEndpointTest {
 	private val request = RegisterKeyRequest.newBuilder()
 		.setValue("02654220273")
 		.setCustomerId(UUID.randomUUID().toString())
-		.setType(KeyType.CPF)
-		.setAccountType(AccountType.CONTA_CORRENTE)
+		.setType(CPF)
+		.setAccountType(CONTA_CORRENTE)
 
 	private val account = AccountResponse(
 		"CONTA_CORRENTE",
@@ -78,7 +82,7 @@ internal class PixManagerEndpointTest {
 				BcbCreatePixRequest.of(
 					Key(
 						"02654220273",
-						KeyType.CPF,
+						CPF,
 						account.toAccount()
 					)
 				)
@@ -89,7 +93,7 @@ internal class PixManagerEndpointTest {
 
 		val error = assertThrows<StatusRuntimeException> { grpc.registerKey(request.build()) }
 
-		assertEquals(Status.ALREADY_EXISTS.code, error.status.code)
+		assertEquals(ALREADY_EXISTS.code, error.status.code)
 		assertEquals("Pix key already exists", error.status.description)
 	}
 
@@ -111,7 +115,7 @@ internal class PixManagerEndpointTest {
 				BcbCreatePixRequest.of(
 					Key(
 						"02654220273",
-						KeyType.CPF,
+						CPF,
 						account.toAccount()
 					)
 				)
@@ -141,7 +145,7 @@ internal class PixManagerEndpointTest {
 
 	@Test
 	fun `Should delete key if client have this key`() {
-		val key = repository.save(Key("abc@def.com", KeyType.EMAIL, account.toAccount()))
+		val key = repository.save(Key("abc@def.com", EMAIL, account.toAccount()))
 
 		val requestRemove = RemoveKeyRequest.newBuilder()
 			.setKeyId(key.id!!)
@@ -153,7 +157,7 @@ internal class PixManagerEndpointTest {
 
 	@Test
 	fun `Should return key if client have this key`() {
-		val key = repository.save(Key("abc@def.com", KeyType.EMAIL, account.toAccount()))
+		val key = repository.save(Key("abc@def.com", EMAIL, account.toAccount()))
 
 		val request = KeyDetailsRequest.newBuilder()
 			.setPixId(
@@ -181,7 +185,7 @@ internal class PixManagerEndpointTest {
 		val error = assertThrows<StatusRuntimeException> { grpc.findKey(request) }
 
 
-		assertEquals(Status.NOT_FOUND.code, error.status.code)
+		assertEquals(NOT_FOUND.code, error.status.code)
 		assertEquals("Key not found", error.status.description)
 	}
 
@@ -191,7 +195,7 @@ internal class PixManagerEndpointTest {
 		val request = KeyDetailsRequest.newBuilder().setKey("124").build()
 		val error = assertThrows<StatusRuntimeException> { grpc.findKey(request) }
 
-		assertEquals(Status.NOT_FOUND.code, error.status.code)
+		assertEquals(NOT_FOUND.code, error.status.code)
 		assertEquals("Key not found", error.status.description)
 	}
 
@@ -199,13 +203,13 @@ internal class PixManagerEndpointTest {
 	@ValueSource(strings = ["key", "123"])
 	fun `Should return key if exists in system or bcb database when find by key`(key: String) {
 		val acc = Account(
-			AccountType.CONTA_CORRENTE,
+			CONTA_CORRENTE,
 			"",
 			"",
 			Owner("123", "a", "a"),
 			Institution("a", "60701190")
 		)
-		repository.save(Key("key", KeyType.EMAIL, acc))
+		repository.save(Key("key", EMAIL, acc))
 
 		val keyHttpResponse = HttpResponse.ok(
 			BcbPixResponse(
@@ -226,13 +230,13 @@ internal class PixManagerEndpointTest {
 	@Test
 	fun `Should return key if exists in database when find by key and customer id`() {
 		val acc = Account(
-			AccountType.CONTA_CORRENTE,
+			CONTA_CORRENTE,
 			"",
 			"",
 			Owner(UUID.randomUUID().toString(), "a", "a"),
 			Institution("a", "60701190")
 		)
-		val key = repository.save(Key("key", KeyType.EMAIL, acc))
+		val key = repository.save(Key("key", EMAIL, acc))
 
 		val request =
 			KeyDetailsRequest.newBuilder()
@@ -255,7 +259,7 @@ internal class PixManagerEndpointTest {
 					.build()
 			)
 		}
-		assertEquals(Status.NOT_FOUND.code, error.status.code)
+		assertEquals(NOT_FOUND.code, error.status.code)
 		assertEquals("Customer not found", error.status.description)
 	}
 
@@ -265,13 +269,13 @@ internal class PixManagerEndpointTest {
 		val institution = Institution("a", "a")
 		val owner1 = Owner(uuid, "a", "a")
 		val owner2 = Owner("321", "a", "a")
-		val account1 = Account(AccountType.CONTA_CORRENTE, "", "", owner1, institution)
-		val account2 = Account(AccountType.CONTA_CORRENTE, "", "", owner2, institution)
+		val account1 = Account(CONTA_CORRENTE, "", "", owner1, institution)
+		val account2 = Account(CONTA_CORRENTE, "", "", owner2, institution)
 		val list = repository.saveAll(
 			listOf(
-				Key("key", KeyType.EMAIL, account1),
-				Key("key2", KeyType.EMAIL, account1),
-				Key("key3", KeyType.EMAIL, account2)
+				Key("key", EMAIL, account1),
+				Key("key2", EMAIL, account1),
+				Key("key3", EMAIL, account2)
 			)
 		)
 		val response =
@@ -289,56 +293,56 @@ internal class PixManagerEndpointTest {
 			Arguments.of(
 				request.build(),
 				null,
-				Status.NOT_FOUND,
+				NOT_FOUND,
 				"Client not found"
 			),
 			// Invalid Key type case
 			Arguments.of(
-				request.clone().setType(KeyType.UNKNOWN_TYPE).build(),
+				request.clone().setType(UNKNOWN_TYPE).build(),
 				account,
-				Status.INVALID_ARGUMENT,
+				INVALID_ARGUMENT,
 				"Key type cannot be UNKNOWN_TYPE"
 			),
 			// Invalid account type case
 			Arguments.of(
-				request.clone().setAccountType(AccountType.UNKNOWN_ACCOUNT).build(),
+				request.clone().setAccountType(UNKNOWN_ACCOUNT).build(),
 				account,
-				Status.INVALID_ARGUMENT,
+				INVALID_ARGUMENT,
 				"The account type cannot be UNKNOWN_TYPE"
 			),
 			// Invalid CPF case
 			Arguments.of(
-				request.clone().setType(KeyType.CPF).setValue("02654220173").build(),
+				request.clone().setType(CPF).setValue("02654220173").build(),
 				account,
-				Status.INVALID_ARGUMENT,
+				INVALID_ARGUMENT,
 				"The CPF is invalid"
 			),
 			// Invalid Phone number case
 			Arguments.of(
-				request.clone().setType(KeyType.PHONE).setValue("5569993551645").build(),
+				request.clone().setType(PHONE).setValue("5569993551645").build(),
 				account,
-				Status.INVALID_ARGUMENT,
+				INVALID_ARGUMENT,
 				"The Phone number is invalid"
 			),
 			//Invalid email case
 			Arguments.of(
-				request.clone().setType(KeyType.EMAIL).setValue("abc@s.").build(),
+				request.clone().setType(EMAIL).setValue("abc@s.").build(),
 				account,
-				Status.INVALID_ARGUMENT,
+				INVALID_ARGUMENT,
 				"The Email is invalid"
 			),
 			// Random key case
 			Arguments.of(
-				request.clone().setType(KeyType.RANDOM).setValue(".").build(),
+				request.clone().setType(RANDOM).setValue(".").build(),
 				account,
-				Status.INVALID_ARGUMENT,
+				INVALID_ARGUMENT,
 				"Value to random key must be null or blank"
 			),
 			// Invalid UUID case
 			Arguments.of(
 				request.clone().setCustomerId(UUID.randomUUID().toString() + "1").build(),
 				account,
-				Status.INVALID_ARGUMENT,
+				INVALID_ARGUMENT,
 				"The UUID is invalid"
 			),
 
