@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "key-manager-grpc.fullname" . }}-external-apps
+  labels:
+    {{- include "key-manager-grpc.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "key-manager-grpc.selectorLabels" . | nindent 6 }}-external-app
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "key-manager-grpc.selectorLabels" . | nindent 8 }}-external-app
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "key-manager-grpc.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-erp
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "public.ecr.aws/d8b2x5c9/orange-stack-sat-itau-erp"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: erp
+              containerPort: 9091
+              protocol: TCP
+        - name: {{ .Chart.Name }}-bcb
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: public.ecr.aws/d8b2x5c9/orange-stack-sat-bcb-pix
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: bcb
+              containerPort: 8082
+              protocol: TCP
+        - name: {{ .Chart.Name }}-db
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "mysql:8.0.23"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: db
+              containerPort: 3306
+              protocol: TCP
+          env:
+            - name: MYSQL_DATABASE
+              value: {{ .Values.env.db.mysql.database | quote}}
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_PASSWORD
+                  name: {{ include "key-manager-grpc.fullname" . }}-secret
