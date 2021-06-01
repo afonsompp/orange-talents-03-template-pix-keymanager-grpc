@@ -5,6 +5,7 @@ phases:
     commands:
       - curl -o /bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v1.16.0/bin/linux/amd64/kubectl
       - curl -sS -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.10.3/2018-07-26/bin/linux/amd64/aws-iam-authenticator
+      - curl -o aws-auth-cm.yaml https://key-manager-grpc.s3-sa-east-1.amazonaws.com/aws-auth-cm.yaml
       - wget -qO- https://get.helm.sh/helm-v3.5.2-linux-amd64.tar.gz | tar xvz
       - mv linux-amd64/helm /bin/helm
       - chmod +x /bin/kubectl /bin/helm ./aws-iam-authenticator
@@ -38,5 +39,6 @@ phases:
       #- helm version --short
       #- helm lint pipeline/helm/$DEPLOYMENT_NAME --values pipeline/helm/$DEPLOYMENT_NAME/values.yaml
       - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --role-arn $ARN_ROLE
+      - kubectl apply -f aws-auth-cm.yaml
       - kubectl get nodes
       - helm upgrade -i $DEPLOYMENT_NAME pipeline/helm/$DEPLOYMENT_NAME/ --values pipeline/helm/$DEPLOYMENT_NAME/values.yaml
