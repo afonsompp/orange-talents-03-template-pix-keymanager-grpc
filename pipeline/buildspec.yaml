@@ -37,7 +37,6 @@ phases:
       ## aqui um exemplo de implementação utilizando helm, caso utilize manifestos, lembre-se do kubectl apply -f <ARQUIVO>.yaml
       #- helm version --short
       #- helm lint pipeline/helm/$DEPLOYMENT_NAME --values pipeline/helm/$DEPLOYMENT_NAME/values.yaml
-      - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region sa-east-1
-      - aws sts get-caller-identity
+      - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --role-arn $ARN_ROLE
       - kubectl get nodes
       - helm upgrade -i $DEPLOYMENT_NAME pipeline/helm/$DEPLOYMENT_NAME/ --values pipeline/helm/$DEPLOYMENT_NAME/values.yaml
