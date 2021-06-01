@@ -13,30 +13,30 @@ phases:
 
   pre_build:
     commands:
-      - echo connecting ecr
+      #- echo connecting ecr
       - docker login -u AWS -p $(aws ecr-public get-login-password --region us-east-1) $URL_REPO
       # aqui você poderá colocar os comandos para o build de seu projeto, exemplo:
-      - sh gradlew build
-      - echo exporting kubeconfig
+      #- sh gradlew build
+      #- echo exporting kubeconfig
       - export KUBECONFIG=$HOME/.kube/config
 
   build:
     commands:
-      - echo Build started on `date`
-      - echo Building the Docker image...
-      - docker build -t $DEPLOYMENT_NAME .
-      - docker tag $DEPLOYMENT_NAME:$IMAGE_TAG $URL_REPO/$DEPLOYMENT_NAME:$IMAGE_TAG
-      - echo Build completed on `date`
+      #- echo Build started on `date`
+      #- echo Building the Docker image...
+      #- docker build -t $DEPLOYMENT_NAME .
+      #- docker tag $DEPLOYMENT_NAME:$IMAGE_TAG $URL_REPO/$DEPLOYMENT_NAME:$IMAGE_TAG
+      #- echo Build completed on `date`
 
   post_build:
     commands:
-      - echo Pushing in to Amazon ECR...
-      - docker push $URL_REPO/$DEPLOYMENT_NAME:$IMAGE_TAG
-      - echo Push completed on `date`
-      - echo deploying to cluster...
-      # aqui um exemplo de implementação utilizando helm, caso utilize manifestos, lembre-se do kubectl apply -f <ARQUIVO>.yaml
-      - helm version --short
-      - helm lint pipeline/helm/$DEPLOYMENT_NAME --values pipeline/helm/$DEPLOYMENT_NAME/values.yaml
-      - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --role-arn $ARN_ROLE
+      #- echo Pushing in to Amazon ECR...
+      #- docker push $URL_REPO/$DEPLOYMENT_NAME:$IMAGE_TAG
+      #- echo Push completed on `date`
+      #- echo deploying to cluster...
+      ## aqui um exemplo de implementação utilizando helm, caso utilize manifestos, lembre-se do kubectl apply -f <ARQUIVO>.yaml
+      #- helm version --short
+      #- helm lint pipeline/helm/$DEPLOYMENT_NAME --values pipeline/helm/$DEPLOYMENT_NAME/values.yaml
+      - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region sa-east-1
       - kubectl get nodes
       - helm upgrade -i $DEPLOYMENT_NAME pipeline/helm/$DEPLOYMENT_NAME/ --values pipeline/helm/$DEPLOYMENT_NAME/values.yaml
