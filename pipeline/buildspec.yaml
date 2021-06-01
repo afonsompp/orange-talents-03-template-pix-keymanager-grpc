@@ -3,7 +3,6 @@ version: 0.2
 phases:
   install:
     commands:
-      - aws configure
       - curl -o /bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v1.16.0/bin/linux/amd64/kubectl
       - curl -sS -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.10.3/2018-07-26/bin/linux/amd64/aws-iam-authenticator
       - wget -qO- https://get.helm.sh/helm-v3.5.2-linux-amd64.tar.gz | tar xvz
@@ -39,5 +38,6 @@ phases:
       #- helm version --short
       #- helm lint pipeline/helm/$DEPLOYMENT_NAME --values pipeline/helm/$DEPLOYMENT_NAME/values.yaml
       - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region sa-east-1
+      - aws sts get-caller-identity
       - kubectl get nodes
       - helm upgrade -i $DEPLOYMENT_NAME pipeline/helm/$DEPLOYMENT_NAME/ --values pipeline/helm/$DEPLOYMENT_NAME/values.yaml
